@@ -1,0 +1,30 @@
+plugins {
+    id 'java'
+    id 'net.neoforged.gradle.userdev' version '7.0.180'
+}
+
+version = '1.0.0'
+group = 'com.minisbot'
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
+}
+
+neoForge {
+    version = '21.1.112'
+    runs {
+        server { server() }
+    }
+    mods {
+        minisbotCarpetAi {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+}

@@ -1,0 +1,14 @@
+{
+    "modLoader": "neoforge",
+    "loaderVersion": { "range": "[[4,)]" },
+    "license": "MIT",
+    "name": "MinisBot Carpet AI",
+    "description": "让地毯假人拥有AI意识 - 双模式(规则/API)",
+    "version": "1.0.0",
+    "id": "minisbot_carpet_ai",
+    "authors": ["Minis"],
+    "dependencies": {
+        "neoforge": { "versionRange": "[21.1,21.2)", "ordering": "NONE", "side": "BOTH" },
+        "minecraft": { "versionRange": "[1.21.1,1.21.2)", "ordering": "NONE", "side": "BOTH" }
+    }
+}
