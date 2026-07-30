@@ -9,8 +9,4 @@ pluginManagement {
     }
 }
 
-plugins {
-    id 'net.neoforged.gradle.userdev' version '7.0.180'
-}
-
 rootProject.name = 'minisbot-carpet-ai'
