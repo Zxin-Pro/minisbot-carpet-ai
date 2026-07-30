@@ -15,15 +15,42 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-      - name: Install Gradle
+      - name: Download NeoForge dependencies
         run: |
-          wget -q "https://services.gradle.org/distributions/gradle-8.10-bin.zip" -O /tmp/gradle.zip
-          unzip -q /tmp/gradle.zip -d /opt
-          echo "/opt/gradle-8.10/bin" >> $GITHUB_PATH
-      - name: Build
-        run: gradle build
+          mkdir -p libs
+          # 下载 NeoForge server jar 作为编译依赖
+          wget -q "https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.112/neoforge-21.1.112-universal.jar" -O libs/neoforge.jar
+      - name: Compile with javac
+        run: |
+          mkdir -p build/classes
+          # 解压 NeoForge jar 获取所有 class
+          cd libs
+          unzip -qo neoforge.jar -d neoforge_classes/
+          cd ..
+          # 构建 classpath
+          CP="libs/neoforge_classes"
+          for jar in libs/neoforge_classes/META-INF/jarjar/*.jar; do
+            unzip -qo "$jar" -d libs/jarjar_extracted/ 2>/dev/null || true
+          done
+          if [ -d libs/jarjar_extracted ]; then
+            CP="$CP:libs/jarjar_extracted"
+          fi
+          # 编译所有源文件
+          find src -name "*.java" > /tmp/sources.txt
+          javac -d build/classes -cp "$CP" @/tmp/sources.txt 2>&1
+      - name: Package jar
+        run: |
+          mkdir -p build/jar
+          # 复制编译的 class 文件
+          cp -r build/classes/* build/jar/ 2>/dev/null || true
+          # 复制模元文件
+          cp -r src/main/resources/META-INF build/jar/
+          cd build/jar
+          jar cf /tmp/minisbot-carpet-ai-1.0.0.jar .
+          cd /tmp
+          ls -la minisbot-carpet-ai-1.0.0.jar
       - name: Upload jar
         uses: actions/upload-artifact@v4
         with:
           name: minisbot-carpet-ai
-          path: build/libs/*.jar
+          path: /tmp/minisbot-carpet-ai-1.0.0.jar
