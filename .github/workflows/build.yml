@@ -15,40 +15,71 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
-      - name: Download NeoForge dependencies
+      - name: Download dependencies
         run: |
           mkdir -p libs
-          # 下载 NeoForge server jar 作为编译依赖
+          # 下载 NeoForge（包含 Minecraft 类）
           wget -q "https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.112/neoforge-21.1.112-universal.jar" -O libs/neoforge.jar
-      - name: Compile with javac
+          # 下载 NeoForge Carpet（需要地毯的类）
+          wget -q "https://github.com/chililisoup/neoforge-carpet/releases/download/v1.0.8/neoforge-carpet-1.21.1-1.0.8+v251027.jar" -O libs/carpet.jar || \
+          curl -sL "https://mediafilez.forgecdn.net/files/6019/141/neoforge-carpet-1.21.1-1.0.8.jar" -o libs/carpet.jar 2>/dev/null || true
+      - name: Compile
         run: |
           mkdir -p build/classes
-          # 解压 NeoForge jar 获取所有 class
+          
+          # 解压 NeoForge 到 classpath
           cd libs
-          unzip -qo neoforge.jar -d neoforge_classes/
+          unzip -qo neoforge.jar -d neoforge_classes/ 2>/dev/null
           cd ..
-          # 构建 classpath
+          
+          # 构建 classpath：NeoForge 类 + 地毯 jar + jarjar 内容
           CP="libs/neoforge_classes"
-          for jar in libs/neoforge_classes/META-INF/jarjar/*.jar; do
-            unzip -qo "$jar" -d libs/jarjar_extracted/ 2>/dev/null || true
-          done
-          if [ -d libs/jarjar_extracted ]; then
+          
+          # 解压 jarjar 嵌入的 jars
+          if ls libs/neoforge_classes/META-INF/jarjar/*.jar 2>/dev/null; then
+            mkdir -p libs/jarjar_extracted
+            for jar in libs/neoforge_classes/META-INF/jarjar/*.jar; do
+              unzip -qo "$jar" -d libs/jarjar_extracted/ 2>/dev/null || true
+            done
             CP="$CP:libs/jarjar_extracted"
           fi
-          # 编译所有源文件
+          
+          # 添加地毯模组
+          if [ -f libs/carpet.jar ]; then
+            CP="$CP:libs/carpet.jar"
+          fi
+          
+          echo "Classpath: $CP"
+          
+          # 编译
           find src -name "*.java" > /tmp/sources.txt
+          echo "源文件:"
+          cat /tmp/sources.txt
+          echo ""
+          echo "编译中..."
           javac -d build/classes -cp "$CP" @/tmp/sources.txt 2>&1
+          
+          # 检查编译是否成功
+          if [ $? -eq 0 ]; then
+            echo "✅ 编译成功"
+          else
+            echo "❌ 编译失败"
+            exit 1
+          fi
       - name: Package jar
         run: |
-          mkdir -p build/jar
-          # 复制编译的 class 文件
-          cp -r build/classes/* build/jar/ 2>/dev/null || true
-          # 复制模元文件
-          cp -r src/main/resources/META-INF build/jar/
+          mkdir -p build/jar/META-INF
+          # 复制 class 文件
+          if [ -d build/classes/com ]; then
+            cp -r build/classes/com build/jar/
+          fi
+          # 复制模组配置
+          cp src/main/resources/META-INF/neoforge.mods.toml build/jar/META-INF/
+          # 打包
           cd build/jar
           jar cf /tmp/minisbot-carpet-ai-1.0.0.jar .
           cd /tmp
-          ls -la minisbot-carpet-ai-1.0.0.jar
+          echo "✅ jar 打包完成: $(ls -la minisbot-carpet-ai-1.0.0.jar)"
       - name: Upload jar
         uses: actions/upload-artifact@v4
         with:
